@@ -20,8 +20,8 @@ public class AlunoDao {
         values.put("nome", aluno.getNome());
         values.put("cpf", aluno.getCpf());
         values.put("telefone", aluno.getTelefone());
-        values.put("endereco", aluno.getEndereco()); // Novo campo
-        values.put("curso", aluno.getCurso());       // Novo campo
+        values.put("endereco", aluno.getEndereco());
+        values.put("curso", aluno.getCurso()); 
 
         return banco.insert("aluno", null, values);
     }
