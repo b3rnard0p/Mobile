@@ -20,8 +20,8 @@ public class Conexao extends SQLiteOpenHelper {
                 "nome varchar(50), " +
                 "cpf varchar(50), " +
                 "telefone varchar(50), " +
-                "endereco varchar(100), " + // Nova coluna
-                "curso varchar(50))");      // Nova coluna
+                "endereco varchar(100), " +
+                "curso varchar(50))");
     }
 
     @Override
