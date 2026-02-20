@@ -37,10 +37,21 @@ public class MainActivity extends AppCompatActivity {
         a.setCpf(cpf.getText().toString());
         a.setTelefone(telefone.getText().toString());
         a.setEndereco(endereco.getText().toString());
-        a.setCurso(curso.getText().toString());
+        a.setCurso(curso.getText().toString()); 
 
         long id = dao.inserir(a);
 
-        Toast.makeText(this, "Aluno inserido com id: " + id, Toast.LENGTH_SHORT).show();
+        if (id == -2) {
+            Toast.makeText(this, "Erro: O CPF informado é inválido.", Toast.LENGTH_LONG).show();
+        }
+        else if (id == -3) {
+            Toast.makeText(this, "Erro: Este CPF já está cadastrado no sistema.", Toast.LENGTH_LONG).show();
+        }
+        else if (id != -1) {
+            Toast.makeText(this, "Aluno inserido com sucesso! ID: " + id, Toast.LENGTH_SHORT).show();
+        }
+        else {
+            Toast.makeText(this, "Erro desconhecido ao salvar no banco de dados.", Toast.LENGTH_LONG).show();
+        }
     }
 }
