@@ -8,8 +8,8 @@ public class Aluno implements Serializable {
     private String nome;
     private String cpf;
     private String telefone;
-    private String endereco; // Novo atributo
-    private String curso;    // Novo atributo
+    private String endereco;
+    private String curso;
 
     public Integer getId() {
         return id;
