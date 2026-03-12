@@ -39,7 +39,6 @@ public class ListarAlunosActivity extends AppCompatActivity {
         registerForContextMenu(listView);
     }
 
-    // Método para inflar o menu quando o item é pressionado
     @Override
     public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
         super.onCreateContextMenu(menu, v, menuInfo);

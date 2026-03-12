@@ -1,12 +1,23 @@
 package com.example.app;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
+import android.provider.MediaStore;
+import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.Toast;
+
+import java.io.ByteArrayOutputStream;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -19,6 +30,10 @@ public class MainActivity extends AppCompatActivity {
     private AlunoDao dao;
     private Aluno aluno = null;
 
+    private ImageView imageView;
+    private static final int CAMERA_PERMISSION_CODE = 100;
+    private static final int REQUEST_IMAGE_CAPTURE = 200;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -30,6 +45,8 @@ public class MainActivity extends AppCompatActivity {
         endereco = findViewById(R.id.editEndereco);
         curso = findViewById(R.id.editCurso);
 
+        imageView = findViewById(R.id.imageView);
+
         dao = new AlunoDao(this);
 
         Intent it = getIntent();
@@ -40,6 +57,58 @@ public class MainActivity extends AppCompatActivity {
             telefone.setText(aluno.getTelefone());
             endereco.setText(aluno.getEndereco());
             curso.setText(aluno.getCurso());
+
+            byte[] foto = aluno.getFotoBytes();
+            if (foto != null && foto.length > 0) {
+                Bitmap bitmap = BitmapFactory.decodeByteArray(foto, 0, foto.length);
+                imageView.setImageBitmap(bitmap);
+            }
+        }
+    }
+
+    public void tirarFoto(View view) {
+        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[] {android.Manifest.permission.CAMERA}, CAMERA_PERMISSION_CODE);
+        } else {
+            startCamera();
+        }
+    }
+
+    private void startCamera() {
+        try {
+            Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
+        } catch (Exception e) {
+            Log.e("CAMERA_DEBUG", "Erro: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == CAMERA_PERMISSION_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                startCamera();
+            } else {
+                Toast.makeText(this, "Permissão necessária para a câmera", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
+            Bundle extras = data.getExtras();
+            Bitmap imageBitmap = (Bitmap) extras.get("data");
+            imageView.setImageBitmap(imageBitmap);
+
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            imageBitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+            byte[] byteArray = stream.toByteArray();
+
+            if (aluno == null) aluno = new Aluno();
+            aluno.setFotoBytes(byteArray);
         }
     }
 
@@ -61,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        if(aluno == null || !cpfDigitado.equals(aluno.getCpf())) {
+        if (aluno == null || !cpfDigitado.equals(aluno.getCpf())) {
             if (dao.existeCpf(cpfDigitado)) {
                 Toast.makeText(this, "CPF duplicado. Insira um CPF diferente.", Toast.LENGTH_SHORT).show();
                 return;
@@ -72,27 +141,27 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "Telefone inválido! Use o formato: (XX) 9XXXX-XXXX", Toast.LENGTH_SHORT).show();
             return;
         }
-        if (aluno == null) {
-            Aluno a = new Aluno();
-            a.setNome(nomeDigitado);
-            a.setCpf(cpfDigitado);
-            a.setTelefone(telefoneDigitado);
-            a.setEndereco(enderecoDigitado);
-            a.setCurso(cursoDigitado);
 
-            long id = dao.inserir(a);
-
-            if (id == -2) {
-                Toast.makeText(this, "Erro: O CPF informado é inválido.", Toast.LENGTH_LONG).show();
-            } else if (id == -3) {
-                Toast.makeText(this, "Erro: Este CPF já está cadastrado.", Toast.LENGTH_LONG).show();
-            } else if (id != -1) {
-                Toast.makeText(this, "Aluno inserido com sucesso! ID: " + id, Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(this, "Erro desconhecido ao salvar.", Toast.LENGTH_LONG).show();
+        if (aluno == null || aluno.getId() == null) {
+            if (aluno == null) {
+                aluno = new Aluno();
             }
-        }
-        else {
+
+            aluno.setNome(nomeDigitado);
+            aluno.setCpf(cpfDigitado);
+            aluno.setTelefone(telefoneDigitado);
+            aluno.setEndereco(enderecoDigitado);
+            aluno.setCurso(cursoDigitado);
+
+            long id = dao.inserir(aluno);
+
+            if (id == -1) {
+                Toast.makeText(this, "Erro ao inserir no banco de dados.", Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(this, "Aluno inserido com sucesso!", Toast.LENGTH_SHORT).show();
+                finish();
+            }
+        } else {
             aluno.setNome(nomeDigitado);
             aluno.setCpf(cpfDigitado);
             aluno.setTelefone(telefoneDigitado);

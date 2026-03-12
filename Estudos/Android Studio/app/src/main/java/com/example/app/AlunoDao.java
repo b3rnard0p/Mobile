@@ -18,27 +18,18 @@ public class AlunoDao {
     }
 
     public long inserir(Aluno aluno){
-        if (!isCpfValido(aluno.getCpf())) {
-            return -2;
-        }
-
-        if (existeCpf(aluno.getCpf())) {
-            return -3;
-        }
+        if (!isCpfValido(aluno.getCpf())) return -2;
+        if (existeCpf(aluno.getCpf())) return -3;
 
         ContentValues values = new ContentValues();
-
         values.put("nome", aluno.getNome());
         values.put("cpf", aluno.getCpf());
         values.put("telefone", aluno.getTelefone());
         values.put("endereco", aluno.getEndereco());
         values.put("curso", aluno.getCurso());
+        values.put("fotoBytes", aluno.getFotoBytes()); // Persistindo a foto [cite: 194]
 
         return banco.insert("aluno", null, values);
-    }
-
-    public void excluir(Aluno a){
-        banco.delete("aluno", "id = ?", new String[]{a.getId().toString()});
     }
 
     public void atualizar(Aluno aluno){
@@ -48,68 +39,14 @@ public class AlunoDao {
         values.put("telefone", aluno.getTelefone());
         values.put("endereco", aluno.getEndereco());
         values.put("curso", aluno.getCurso());
+        values.put("fotoBytes", aluno.getFotoBytes());
 
         banco.update("aluno", values, "id = ?", new String[]{aluno.getId().toString()});
     }
 
-    /**
-     * Verifica se o CPF já existe no banco de dados.
-     */
-    public boolean existeCpf(String cpf) {
-        String sql = "SELECT cpf FROM aluno WHERE cpf = ?";
-        Cursor cursor = banco.rawQuery(sql, new String[]{cpf});
-
-        boolean existe = cursor.getCount() > 0;
-
-        cursor.close();
-
-        return existe;
-    }
-
-    /**
-     * Validador matemático de CPF.
-     */
-    public boolean isCpfValido(String cpf) {
-        if (cpf == null) return false;
-
-        cpf = cpf.replaceAll("[^0-9]", "");
-
-        if (cpf.length() != 11 || cpf.matches("(\\d)\\1{10}")) {
-            return false;
-        }
-
-        try {
-            int soma = 0;
-            int peso = 10;
-            for (int i = 0; i < 9; i++) {
-                int num = (int) (cpf.charAt(i) - 48);
-                soma = soma + (num * peso);
-                peso--;
-            }
-
-            int resto = 11 - (soma % 11);
-            char digito10 = (resto == 10 || resto == 11) ? '0' : (char) (resto + 48);
-
-            soma = 0;
-            peso = 11;
-            for (int i = 0; i < 10; i++) {
-                int num = (int) (cpf.charAt(i) - 48);
-                soma = soma + (num * peso);
-                peso--;
-            }
-
-            resto = 11 - (soma % 11);
-            char digito11 = (resto == 10 || resto == 11) ? '0' : (char) (resto + 48);
-
-            return (digito10 == cpf.charAt(9)) && (digito11 == cpf.charAt(10));
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
     public List<Aluno> obterTodos(){
         List<Aluno> alunos = new ArrayList<>();
-        Cursor cursor = banco.query("aluno", new String[]{"id", "nome", "cpf", "telefone", "endereco", "curso"},
+        Cursor cursor = banco.query("aluno", new String[]{"id", "nome", "cpf", "telefone", "endereco", "curso", "fotoBytes"},
                 null, null,null,null,null);
 
         while(cursor.moveToNext()){
@@ -120,23 +57,44 @@ public class AlunoDao {
             a.setTelefone(cursor.getString(3));
             a.setEndereco(cursor.getString(4));
             a.setCurso(cursor.getString(5));
-
+            a.setFotoBytes(cursor.getBlob(6));
             alunos.add(a);
         }
+        cursor.close();
         return alunos;
     }
 
-    /**
-     * Validador de Telefone (NOVO)
-     * Verifica se o formato é exatamente (XX) 9XXXX-XXXX
-     */
+    public void excluir(Aluno a){
+        banco.delete("aluno", "id = ?", new String[]{a.getId().toString()});
+    }
+
+    public boolean existeCpf(String cpf) {
+        String sql = "SELECT cpf FROM aluno WHERE cpf = ?";
+        Cursor cursor = banco.rawQuery(sql, new String[]{cpf});
+        boolean existe = cursor.getCount() > 0;
+        cursor.close();
+        return existe;
+    }
+
+    public boolean isCpfValido(String cpf) {
+        if (cpf == null) return false;
+        cpf = cpf.replaceAll("[^0-9]", "");
+        if (cpf.length() != 11 || cpf.matches("(\\d)\\1{10}")) return false;
+        try {
+            int soma = 0, peso = 10;
+            for (int i = 0; i < 9; i++) soma += (cpf.charAt(i) - 48) * peso--;
+            int resto = 11 - (soma % 11);
+            char dig10 = (resto > 9) ? '0' : (char)(resto + 48);
+            soma = 0; peso = 11;
+            for (int i = 0; i < 10; i++) soma += (cpf.charAt(i) - 48) * peso--;
+            resto = 11 - (soma % 11);
+            char dig11 = (resto > 9) ? '0' : (char)(resto + 48);
+            return (dig10 == cpf.charAt(9)) && (dig11 == cpf.charAt(10));
+        } catch (Exception e) { return false; }
+    }
+
     public boolean validaTelefone(String telefone) {
-        if (telefone == null || telefone.isEmpty()) {
-            return false;
-        }
-
-        String apenasNumeros = telefone.replaceAll("[^0-9]", "");
-
-        return apenasNumeros.matches("^\\d{2}9\\d{8}$");
+        if (telefone == null || telefone.isEmpty()) return false;
+        return telefone.replaceAll("[^0-9]", "").matches("^\\d{2}9\\d{8}$");
     }
 }
