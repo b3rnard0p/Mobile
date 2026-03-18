@@ -20,6 +20,9 @@ public interface AlunoDaoRoom {
     @Query("SELECT * FROM aluno")
     List<Aluno> obterTodos();
 
+    @Query("SELECT * FROM aluno WHERE nome LIKE :iniciais || '%'")
+    List<Aluno> buscarPorNome(String iniciais);
+
     @Delete
     void excluir(Aluno aluno);
 

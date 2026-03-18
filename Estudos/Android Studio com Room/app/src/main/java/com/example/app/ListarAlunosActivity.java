@@ -9,6 +9,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.ListView;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -19,9 +20,10 @@ import java.util.List;
 public class ListarAlunosActivity extends AppCompatActivity {
 
     private ListView listView;
-    private AlunoDaoRoom alunoDaoRoom; // Atualizado para Room
-    private List<Aluno> alunos;
+    private EditText editPesquisa; // Adicionado
+    private AlunoDaoRoom alunoDaoRoom;
     private List<Aluno> alunosFiltrados = new ArrayList<>();
+    private ArrayAdapter<Aluno> adaptador; // Promovido a escopo global da classe
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,15 +32,33 @@ public class ListarAlunosActivity extends AppCompatActivity {
 
         listView = findViewById(R.id.lista_alunos);
 
+        // ATENÇÃO: Verifique se o ID no seu arquivo XML é "editPesquisa"
+        editPesquisa = findViewById(R.id.editPesquisa);
+
         alunoDaoRoom = AppDatabase.getInstance(this).alunoDaoRoom();
 
-        alunos = alunoDaoRoom.obterTodos();
-        alunosFiltrados.addAll(alunos);
-
-        ArrayAdapter<Aluno> adaptador = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, alunosFiltrados);
+        // Inicializa o adaptador com a lista vazia (como pede a atividade)
+        adaptador = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, alunosFiltrados);
         listView.setAdapter(adaptador);
 
         registerForContextMenu(listView);
+    }
+
+    // NOVO MÉTODO: Acionado ao clicar no botão Buscar
+    public void pesquisarAluno(View view) {
+        String termoBusca = editPesquisa.getText().toString().trim();
+        alunosFiltrados.clear();
+
+        if (termoBusca.isEmpty()) {
+            // Se vazio, exibe todos
+            alunosFiltrados.addAll(alunoDaoRoom.obterTodos());
+        } else {
+            // Se digitado, busca pelas iniciais
+            alunosFiltrados.addAll(alunoDaoRoom.buscarPorNome(termoBusca));
+        }
+
+        // Atualiza a ListView
+        adaptador.notifyDataSetChanged();
     }
 
     @Override
@@ -60,9 +80,8 @@ public class ListarAlunosActivity extends AppCompatActivity {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         alunosFiltrados.remove(alunoExcluir);
-                        alunos.remove(alunoExcluir);
                         alunoDaoRoom.excluir(alunoExcluir);
-                        listView.invalidateViews();
+                        adaptador.notifyDataSetChanged(); // Atualiza a lista na hora
                     }
                 }).create();
         dialog.show();
@@ -80,11 +99,9 @@ public class ListarAlunosActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        alunos = alunoDaoRoom.obterTodos();
         alunosFiltrados.clear();
-        alunosFiltrados.addAll(alunos);
-        ArrayAdapter<Aluno> adaptador = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, alunosFiltrados);
-        listView.setAdapter(adaptador);
+        if (editPesquisa != null) editPesquisa.setText("");
+        if (adaptador != null) adaptador.notifyDataSetChanged();
     }
 
     public void voltarParaCadastro(View view){
